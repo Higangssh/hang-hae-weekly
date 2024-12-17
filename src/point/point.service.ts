@@ -16,8 +16,6 @@ export class PointService {
 
   // 특정 유저의 포인트 조회
   async getUserPoint(userId: number): Promise<UserPoint> {
-    this.validateUserId(userId);
-
     const user = await this.userDb.selectById(userId);
 
     if (this.isNotExistUser(user, user.updateMillis)) {
@@ -29,7 +27,6 @@ export class PointService {
 
   // 특정 유저의 포인트 충전/이용 내역 조회
   async getPointHistories(userId: number): Promise<PointHistory[]> {
-    this.validateUserId(userId);
     return this.historyDb.selectAllByUserId(userId);
   }
 
@@ -39,12 +36,9 @@ export class PointService {
     amount: number,
     date: number,
   ): Promise<UserPoint> {
-    this.validateUserId(userId);
-    this.validateAmount(amount);
-
     const uesr = await this.userDb.selectById(userId);
 
-    // 기본값 확인
+    // 존재하는 유저 인지 확인
     if (this.isNotExistUser(uesr, uesr.updateMillis)) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
@@ -66,12 +60,9 @@ export class PointService {
     amount: number,
     date: number,
   ): Promise<UserPoint> {
-    this.validateUserId(userId);
-    this.validateAmount(amount);
-
     const user = await this.userDb.selectById(userId);
 
-    // 기본값 확인
+    // 존재하는 유저 인지 확인
     if (this.isNotExistUser(user, user.updateMillis)) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
@@ -94,17 +85,5 @@ export class PointService {
   // 새로운 유저인지 (테이블에서 반환된 기본값을 판별)
   private isNotExistUser(user: UserPoint, date: number): boolean {
     return user.point === 0 && user.updateMillis === date;
-  }
-
-  private validateUserId(userId: number) {
-    if (!Number.isInteger(userId) || userId <= 0) {
-      throw new BadRequestException('Invalid userId');
-    }
-  }
-
-  private validateAmount(amount: number) {
-    if (amount <= 0) {
-      throw new BadRequestException('Amount must be greater than 0');
-    }
   }
 }

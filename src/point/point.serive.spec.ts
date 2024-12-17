@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PointService } from './point.service';
 import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { TransactionType } from './point.model';
 
 describe('PointService', () => {
@@ -25,7 +29,9 @@ describe('PointService', () => {
     pointService = module.get<PointService>(PointService);
   });
 
-  afterEach(() => {});
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   describe('getUserPoint', () => {
     it('should return user points for a valid userId', async () => {
@@ -37,12 +43,6 @@ describe('PointService', () => {
         point: 100,
         updateMillis: expect.any(Number),
       });
-    });
-
-    it('should throw BadRequestException for invalid userId', async () => {
-      await expect(pointService.getUserPoint(0)).rejects.toThrow(
-        BadRequestException,
-      );
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
@@ -60,12 +60,6 @@ describe('PointService', () => {
       expect(result.length).toBe(1);
       expect(result[0]).toMatchObject({ userId: 1, amount: 100 });
     });
-
-    it('should throw BadRequestException for invalid userId', async () => {
-      await expect(pointService.getPointHistories(-1)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
   });
 
   describe('chargeUserPoint', () => {
@@ -74,18 +68,6 @@ describe('PointService', () => {
 
       const result = await pointService.chargeUserPoint(1, 50, Date.now());
       expect(result.point).toBe(100);
-    });
-
-    it('should throw BadRequestException for invalid amount', async () => {
-      await expect(
-        pointService.chargeUserPoint(1, 0, Date.now()),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException for invalid userId', async () => {
-      await expect(
-        pointService.chargeUserPoint(0, 50, Date.now()),
-      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -102,12 +84,6 @@ describe('PointService', () => {
 
       await expect(
         pointService.useUserPoint(1, 50, Date.now()),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException for invalid amount', async () => {
-      await expect(
-        pointService.useUserPoint(1, -10, Date.now()),
       ).rejects.toThrow(BadRequestException);
     });
 
