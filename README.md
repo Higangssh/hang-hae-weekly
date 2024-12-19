@@ -84,6 +84,6 @@ async useUserPoint(userId: number, amount: number): Promise<UserPoint> {
   - Redis와 같은 중앙 집중식 저장소를 사용한 잠금 메커니즘(Redlock)을 고려할 수 있습니다.
   - 이를 통해 다중 서버 환경에서도 동시성 제어를 보장할 수 있습니다.
 
-## 4. 결론
+## 5. 결론
 
 `PointService` 클래스의 동시성 제어 메커니즘은 `async-lock` 라이브러리를 활용하여 단일 서버에서의 데이터 일관성과 스레드 안전성을 보장합니다.
