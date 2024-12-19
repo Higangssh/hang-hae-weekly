@@ -61,7 +61,7 @@ export class PointController {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be greater than 0');
     }
-    return this.pointService.chargeUserPoint(userId, amount, Date.now());
+    return this.pointService.chargeUserPoint(userId, amount);
   }
 
   /**
@@ -84,6 +84,6 @@ export class PointController {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be greater than 0');
     }
-    return this.pointService.useUserPoint(userId, amount, Date.now());
+    return this.pointService.useUserPoint(userId, amount);
   }
 }
