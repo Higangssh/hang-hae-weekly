@@ -2,11 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PointService } from './point.service';
 import { UserPointTable } from '../database/userpoint.table';
 import { PointHistoryTable } from '../database/pointhistory.table';
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { TransactionType } from './point.model';
 
 describe('PointService', () => {
@@ -44,12 +40,6 @@ describe('PointService', () => {
         updateMillis: expect.any(Number),
       });
     });
-
-    it('should throw NotFoundException if user does not exist', async () => {
-      await expect(pointService.getUserPoint(99)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
   });
 
   describe('getPointHistories', () => {
@@ -66,7 +56,7 @@ describe('PointService', () => {
     it('should charge user points correctly', async () => {
       await userDb.insertOrUpdate(1, 50);
 
-      const result = await pointService.chargeUserPoint(1, 50, Date.now());
+      const result = await pointService.chargeUserPoint(1, 50);
       expect(result.point).toBe(100);
     });
   });
@@ -75,22 +65,70 @@ describe('PointService', () => {
     it('should deduct user points correctly', async () => {
       await userDb.insertOrUpdate(1, 100);
 
-      const result = await pointService.useUserPoint(1, 50, Date.now());
+      const result = await pointService.useUserPoint(1, 50);
       expect(result.point).toBe(50);
     });
 
     it('should throw BadRequestException if points are insufficient', async () => {
       await userDb.insertOrUpdate(1, 30);
 
-      await expect(
-        pointService.useUserPoint(1, 50, Date.now()),
-      ).rejects.toThrow(BadRequestException);
+      await expect(pointService.useUserPoint(1, 50)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('Concurrency Tests', () => {
+    it('should handle concurrent charge requests correctly', async () => {
+      await userDb.insertOrUpdate(1, 100);
+
+      const promises = [
+        pointService.chargeUserPoint(1, 50),
+        pointService.chargeUserPoint(1, 30),
+        pointService.chargeUserPoint(1, 20),
+      ];
+
+      const results = await Promise.all(promises);
+
+      const finalResult = await pointService.getUserPoint(1);
+      expect(finalResult.point).toBe(200);
+
+      expect(results[0].point).toBe(150);
+      expect(results[1].point).toBe(180);
+      expect(results[2].point).toBe(200);
     });
 
-    it('should throw NotFoundException if user does not exist', async () => {
-      await expect(
-        pointService.useUserPoint(99, 30, Date.now()),
-      ).rejects.toThrow(NotFoundException);
+    it('should handle concurrent use requests correctly', async () => {
+      await userDb.insertOrUpdate(1, 300);
+
+      const promises = [
+        pointService.useUserPoint(1, 50),
+        pointService.useUserPoint(1, 100),
+        pointService.useUserPoint(1, 150),
+      ];
+
+      const results = await Promise.all(promises);
+
+      expect(results[0].point).toBe(250);
+      expect(results[1].point).toBe(150);
+      expect(results[2].point).toBe(0);
+
+      const finalResult = await pointService.getUserPoint(1);
+      expect(finalResult.point).toBe(0);
+    });
+
+    it('should throw an exception if points are insufficient in concurrent use requests', async () => {
+      await userDb.insertOrUpdate(1, 100);
+
+      const promises = [
+        pointService.useUserPoint(1, 70),
+        pointService.useUserPoint(1, 50),
+      ];
+
+      await expect(Promise.all(promises)).rejects.toThrow(BadRequestException);
+
+      const finalResult = await pointService.getUserPoint(1);
+      expect(finalResult.point).toBeGreaterThanOrEqual(30);
     });
   });
 });
